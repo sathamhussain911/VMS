@@ -198,3 +198,4 @@ When ready for Phase 2, add:
 - Update sidebar nav in `AppShell.tsx`
 
 The database schema is already Phase 2-ready (`fuel_entries`, `maintenance_requests` tables referenced in schema).
+ 
