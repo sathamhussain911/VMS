@@ -1,0 +1,26 @@
+{
+  "name": "FFC Transport Management",
+  "short_name": "FFC TMS",
+  "description": "Fresh Fruits Company Driver Portal",
+  "start_url": "/driver",
+  "display": "standalone",
+  "background_color": "#1b4a00",
+  "theme_color": "#3d7a18",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "logistics"]
+}
