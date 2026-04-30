@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -9,6 +9,22 @@ export default function NewTripPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [branches, setBranches] = useState<{id: string, name: string, code: string}[]>([])
+  const [userBranchId, setUserBranchId] = useState<string>('')
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const [{ data: profile }, { data: branchList }] = await Promise.all([
+        supabase.from('users').select('branch_id').eq('id', user.id).single(),
+        supabase.from('branches').select('id, name, code').order('name'),
+      ])
+      if (profile?.branch_id) setUserBranchId(profile.branch_id)
+      if (branchList) setBranches(branchList)
+    }
+    load()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -18,12 +34,12 @@ export default function NewTripPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Not authenticated'); setLoading(false); return }
 
-    // Get user profile for branch
-    const { data: profile } = await supabase.from('users').select('branch_id').eq('id', user.id).single()
+    const branch_id = form.get('branch_id') as string
+    if (!branch_id) { setError('Please select a branch'); setLoading(false); return }
 
     const { data, error: err } = await supabase.from('trips').insert({
       requester_id: user.id,
-      branch_id: form.get('branch_id') as string || profile?.branch_id,
+      branch_id,
       vehicle_type_needed: form.get('vehicle_type') as string || 'any',
       priority: form.get('priority') as string || 'normal',
       planned_start: `${form.get('planned_date')}T${form.get('planned_time')}:00`,
@@ -57,6 +73,18 @@ export default function NewTripPage() {
       <form onSubmit={handleSubmit} className="card">
         <div className="card-header"><span className="card-title">Trip Details</span></div>
         <div className="card-body space-y-4">
+
+          <div>
+            <label className="form-label">Branch *</label>
+            <select name="branch_id" className="form-control" required
+              value={userBranchId} onChange={e => setUserBranchId(e.target.value)}>
+              <option value="">Select branch…</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="form-label">Planned Date *</label>
@@ -68,6 +96,7 @@ export default function NewTripPage() {
               <input name="planned_time" type="time" className="form-control" required defaultValue="09:00"/>
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="form-label">Vehicle Type Needed</label>
@@ -89,6 +118,7 @@ export default function NewTripPage() {
               </select>
             </div>
           </div>
+
           <div>
             <label className="form-label">Cargo Description</label>
             <textarea name="cargo" className="form-control" rows={3}
