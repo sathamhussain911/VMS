@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { formatDate, expiryStatus, vehicleStatusColour } from '@/lib/utils'
 
-export default function AssignTripPage() {
+function AssignTripPageInner() {
   const searchParams = useSearchParams()
   const id = searchParams.get('id') ?? ''
   const router = useRouter()
@@ -24,7 +24,7 @@ export default function AssignTripPage() {
     Promise.all([
       supabase.from('trips').select('*, branch:branches(name)').eq('id',id).single(),
       supabase.from('vehicles').select('id,vehicle_number,vehicle_type,make,model,status,mulkiya_expiry,insurance_expiry,branch:branches(name)').eq('status','available').is('deleted_at',null).order('vehicle_number'),
-      supabase.from('drivers').select('id,full_name,employee_id,duty_status,performance_score,branch:branches(name)').eq('status','active').eq('duty_status','on_duty').order('full_name'),
+      supabase.from('drivers').select('id,full_name,employee_id,duty_status,performance_score,branch:branches(name)').eq('status','active').order('full_name'),
     ]).then(([t,v,d]) => { setTrip(t.data); setVehicles(v.data??[]); setDrivers(d.data??[]); setPageLoading(false) })
   }, [id])
 
@@ -108,5 +108,13 @@ export default function AssignTripPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function AssignTripPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-700/20 border-t-primary-700 rounded-full animate-spin"/></div>}>
+      <AssignTripPageInner />
+    </Suspense>
   )
 }
