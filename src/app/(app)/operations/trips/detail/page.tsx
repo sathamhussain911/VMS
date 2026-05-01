@@ -16,15 +16,27 @@ function TripDetailPageInner() {
 
   useEffect(() => {
     if (!id) { setLoading(false); return }
-    supabase.from('trips')
-      .select('*,branch:branches(name),vehicle:vehicles(id,vehicle_number,make,model),driver:drivers(id,full_name,mobile),requester:users(full_name),stops:trip_stops(*),events:trip_events(*,actor:users(full_name))')
-      .eq('id', id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) setFetchError(error.message)
-        setTrip(data)
-        setLoading(false)
-      })
+    async function load() {
+      // Fetch trip without user joins to avoid ambiguous FK error
+      const { data, error } = await supabase.from('trips')
+        .select('*,branch:branches(name),vehicle:vehicles(id,vehicle_number,make,model),driver:drivers(id,full_name,mobile),stops:trip_stops(*),events:trip_events(*)')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (error) { setFetchError(error.message); setLoading(false); return }
+      if (!data) { setLoading(false); return }
+
+      // Fetch requester name separately
+      let requesterName = null
+      if (data.requester_id) {
+        const { data: u } = await supabase.from('users').select('full_name').eq('id', data.requester_id).maybeSingle()
+        requesterName = u?.full_name
+      }
+
+      setTrip({ ...data, requester: { full_name: requesterName } })
+      setLoading(false)
+    }
+    load()
   }, [id])
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-700/20 border-t-primary-700 rounded-full animate-spin"/></div>
@@ -34,7 +46,6 @@ function TripDetailPageInner() {
   const stops = (trip.stops ?? []).sort((a: any, b: any) => a.sequence - b.sequence)
   const events = (trip.events ?? []).sort((a: any, b: any) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
   const canAssign = ['requested', 'approved'].includes(trip.status)
-
   const STOP_STATUS: Record<string, string> = { delivered: 'bg-green-100 text-green-700', pending: 'bg-gray-100 text-gray-500', partial: 'bg-amber-100 text-amber-700', failed: 'bg-red-100 text-red-700' }
 
   return (
@@ -63,7 +74,7 @@ function TripDetailPageInner() {
                 { label: 'Planned End', value: formatDateTime(trip.planned_end) },
                 { label: 'Actual Start', value: formatDateTime(trip.actual_start) },
                 { label: 'Actual End', value: formatDateTime(trip.actual_end) },
-                { label: 'Vehicle', value: trip.vehicle ? `${trip.vehicle.vehicle_number}` : null },
+                { label: 'Vehicle', value: trip.vehicle ? trip.vehicle.vehicle_number : null },
                 { label: 'Driver', value: trip.driver?.full_name },
                 { label: 'Requested By', value: trip.requester?.full_name },
                 { label: 'Opening Odo', value: trip.opening_odometer ? `${trip.opening_odometer.toLocaleString()} km` : null },
@@ -100,10 +111,6 @@ function TripDetailPageInner() {
                       <span className={`badge ${STOP_STATUS[stop.delivery_status]}`}>{stop.delivery_status}</span>
                     </div>
                     {stop.address && <div className="text-[12.5px] text-gray-500 ml-9">{stop.address}</div>}
-                    <div className="flex gap-4 mt-1 ml-9 text-[12px] text-gray-400 flex-wrap">
-                      {stop.contact_name && <span>👤 {stop.contact_name}</span>}
-                      {stop.expected_arrival && <span>🕐 ETA {formatDate(stop.expected_arrival, 'HH:mm')}</span>}
-                    </div>
                   </div>
                 ))}
             </div>
@@ -126,7 +133,6 @@ function TripDetailPageInner() {
                         ? <><span className="font-semibold capitalize">{ev.to_status?.replace('_', ' ')}</span>{ev.from_status && ` ← ${ev.from_status.replace('_', ' ')}`}</>
                         : <span className="capitalize">{ev.event_type}</span>}
                     </div>
-                    {ev.actor?.full_name && <div className="text-[11.5px] text-gray-400">by {ev.actor.full_name}</div>}
                   </div>
                 </div>
               ))}
