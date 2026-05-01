@@ -16,6 +16,8 @@ const NAV = [
   { section: 'Fleet' },
   { href: '/fleet/vehicles', label: 'Vehicles', icon: 'truck' },
   { href: '/fleet/drivers', label: 'Drivers', icon: 'users' },
+  { href: '/fleet/fuel', label: 'Fuel Log', icon: '⛽' },
+{ href: '/fleet/maintenance', label: 'Maintenance', icon: '🔧' },
   { section: 'Compliance' },
   { href: '/compliance/documents', label: 'Documents & Expiry', icon: 'file' },
   { section: 'Admin' },
