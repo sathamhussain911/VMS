@@ -23,7 +23,7 @@ function AssignTripPageInner() {
   useEffect(() => {
     Promise.all([
       supabase.from('trips').select('*, branch:branches(name)').eq('id',id).single(),
-      supabase.from('vehicles').select('id,vehicle_number,vehicle_type,make,model,status,mulkiya_expiry,insurance_expiry,branch:branches(name)').eq('status','available').is('deleted_at',null).order('vehicle_number'),
+      supabase.from('vehicles').select('id,vehicle_number,vehicle_type,make,model,status,mulkiya_expiry,insurance_expiry,branch:branches(name)').not('status','in','("maintenance","inactive")').is('deleted_at',null).order('vehicle_number'),
       supabase.from('drivers').select('id,full_name,employee_id,duty_status,performance_score,branch:branches(name)').eq('status','active').order('full_name'),
     ]).then(([t,v,d]) => { setTrip(t.data); setVehicles(v.data??[]); setDrivers(d.data??[]); setPageLoading(false) })
   }, [id])
