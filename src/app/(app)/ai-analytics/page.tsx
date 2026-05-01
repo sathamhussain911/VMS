@@ -33,8 +33,9 @@ export default function AIAnalyticsPage() {
 
   useEffect(() => {
     // Load saved API key from localStorage
-    const saved = localStorage.getItem('grok_api_key')
-    if (saved) setApiKey(saved)
+    const saved = localStorage.getItem('grok_api_key') || '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'
+    setApiKey(saved)
+    localStorage.setItem('grok_api_key', saved)
     loadFleetContext()
   }, [])
 
