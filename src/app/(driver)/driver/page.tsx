@@ -127,8 +127,8 @@ export default function DriverHomePage() {
       <div className="px-4 pt-10 pb-5" style={{ background: '#14532d' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-white text-[13px]" style={{ background: '#16a34a' }}>
-              {driver?.full_name?.charAt(0) ?? 'D'}
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+              <img src="/ffc-logo.png" alt="FFC" className="w-full h-full object-cover"/>
             </div>
             <div>
               <div className="text-white font-bold text-[15px]">
