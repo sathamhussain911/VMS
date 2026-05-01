@@ -75,7 +75,9 @@ export default function AppShell({ user, children }: AppShellProps) {
     <div className="flex h-screen overflow-hidden bg-gray-100">
       <nav className={cn('flex flex-col h-full bg-primary-900 transition-all duration-200 flex-shrink-0', collapsed ? 'w-16' : 'w-[260px]')} style={{ zIndex: 100 }}>
         <div className="h-16 flex items-center gap-3 px-4 border-b border-white/10 flex-shrink-0 overflow-hidden">
-          <div className="w-9 h-9 min-w-[36px] bg-gradient-to-br from-primary-400 to-primary-500 rounded-[9px] flex items-center justify-center font-extrabold text-[15px] text-white shadow-md">FFC</div>
+          <div className="w-9 h-9 min-w-[36px] rounded-[9px] overflow-hidden shadow-md flex-shrink-0">
+            <img src="/ffc-logo.png" alt="FFC" className="w-full h-full object-cover"/>
+          </div>
           {!collapsed && (
             <div className="overflow-hidden whitespace-nowrap">
               <strong className="block text-white text-[14px] font-extrabold tracking-tight leading-tight">Fresh Fruits Co.</strong>
