@@ -34,6 +34,7 @@ export default function SmartDispatchPage() {
   const [messages, setMessages] = useState<AIMessage[]>([])
   const [input, setInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const [generateError, setGenerateError] = useState('')
   const [tab, setTab] = useState<'plan' | 'board' | 'chat'>('plan')
   const [successMsg, setSuccessMsg] = useState('')
 
@@ -66,13 +67,20 @@ export default function SmartDispatchPage() {
   async function generatePlan() {
     setGenerating(true)
     setSuggestions([])
+    setGenerateError('')
 
     const unassigned = trips.filter(t => !t.vehicle_id || !t.driver_id)
-    const availVehicles = vehicles.filter(v => v.status === 'available')
-    const availDrivers = drivers.filter(d => d.duty_status === 'off_duty' || d.duty_status === 'available')
+    const availVehicles = vehicles.filter(v => v.status === 'available' || v.status === 'available')
+    const availDrivers = drivers.filter(d => !['on_trip'].includes(d.duty_status ?? ''))
 
     if (unassigned.length === 0) {
       setSuggestions([])
+      setGenerating(false)
+      return
+    }
+
+    if (availVehicles.length === 0 || availDrivers.length === 0) {
+      setGenerateError(`Not enough resources: ${availVehicles.length} vehicles available, ${availDrivers.length} drivers available.`)
       setGenerating(false)
       return
     }
@@ -129,13 +137,37 @@ Only include trips you can assign. If no suitable vehicle or driver, skip that t
           max_tokens: 2000,
         }),
       })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        setGenerating(false)
+        setSuggestions([])
+        alert('Groq API error: ' + (errData.error?.message ?? res.status))
+        return
+      }
+
       const data = await res.json()
       const raw = data.choices?.[0]?.message?.content ?? '[]'
-      const clean = raw.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      setSuggestions(Array.isArray(parsed) ? parsed : [])
-    } catch (err) {
+
+      // Extract JSON array from response — handle various formats
+      let jsonStr = raw
+      const jsonMatch = raw.match(/\[([\s\S]*?)\]/)
+      if (jsonMatch) jsonStr = jsonMatch[0]
+      jsonStr = jsonStr.replace(/```json|```/g, '').trim()
+
+      try {
+        const parsed = JSON.parse(jsonStr)
+        setSuggestions(Array.isArray(parsed) ? parsed : [])
+      } catch {
+        // If JSON fails, show raw response for debugging
+        console.error('JSON parse failed. Raw:', raw)
+        setSuggestions([])
+        setGenerateError('AI returned unexpected format. Try again.')
+      }
+    } catch (err: any) {
+      console.error('Generate plan error:', err)
       setSuggestions([])
+      setGenerateError(err.message ?? 'Network error. Please try again.')
     }
     setGenerating(false)
   }
@@ -248,7 +280,7 @@ SUGGESTIONS GENERATED: ${suggestions.length} | APPLIED: ${applied.size}
           { label: 'Unassigned', value: unassigned.length, color: unassigned.length > 0 ? 'text-red-600' : 'text-green-600', icon: '⚠️' },
           { label: 'Urgent', value: urgent.length, color: urgent.length > 0 ? 'text-red-600' : 'text-gray-400', icon: '🚨' },
           { label: 'Available Vehicles', value: vehicles.filter(v => v.status === 'available').length, color: 'text-blue-600', icon: '🚛' },
-          { label: 'Available Drivers', value: drivers.filter(d => d.duty_status === 'off_duty').length, color: 'text-green-600', icon: '👤' },
+          { label: 'Available Drivers', value: drivers.filter(d => d.duty_status !== 'on_trip').length, color: 'text-green-600', icon: '👤' },
         ].map((s, i) => (
           <div key={i} className="card"><div className="card-body py-3">
             <div className="text-xl mb-1">{s.icon}</div>
@@ -309,6 +341,14 @@ SUGGESTIONS GENERATED: ${suggestions.length} | APPLIED: ${applied.size}
               </div>
             </div>
           </div>
+
+          {/* Generate error */}
+          {generateError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-[13px] text-red-700 flex justify-between">
+              <span>❌ {generateError}</span>
+              <button onClick={() => setGenerateError('')} className="text-red-400">×</button>
+            </div>
+          )}
 
           {/* No unassigned */}
           {unassigned.length === 0 && (
@@ -507,9 +547,9 @@ SUGGESTIONS GENERATED: ${suggestions.length} | APPLIED: ${applied.size}
               </div>
             </div>
             <div className="card">
-              <div className="card-header"><span className="card-title">👤 Available Drivers</span><span className="text-[12px] text-gray-400">{drivers.filter(d => d.duty_status === 'off_duty').length}</span></div>
+              <div className="card-header"><span className="card-title">👤 Available Drivers</span><span className="text-[12px] text-gray-400">{drivers.filter(d => d.duty_status !== 'on_trip').length}</span></div>
               <div className="divide-y divide-gray-50">
-                {drivers.filter(d => d.duty_status === 'off_duty').slice(0, 8).map(d => (
+                {drivers.filter(d => d.duty_status !== 'on_trip').slice(0, 8).map(d => (
                   <div key={d.id} className="px-5 py-2.5 flex justify-between items-center">
                     <div>
                       <div className="font-semibold text-[13px]">{d.full_name}</div>
