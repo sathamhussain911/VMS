@@ -33,8 +33,9 @@ export default function AIAnalyticsPage() {
   const [dataError, setDataError] = useState('')
 
   useEffect(() => {
-    const saved = localStorage.getItem('grok_api_key')
-    if (saved) setApiKey(saved)
+    const saved = localStorage.getItem('grok_api_key') || 'xai-dvwCWM0IZtjYCfpJdkMrzRObM1RB1JHObSQ3kG8o1J43TfTQjDtoyLfgwyv0e6nnTbKHLD3OQIsdjmKC'
+    setApiKey(saved)
+    if (!localStorage.getItem('grok_api_key')) localStorage.setItem('grok_api_key', saved)
     loadFleetContext()
   }, [])
 
@@ -114,7 +115,7 @@ Company: Fresh Fruits Company UAE | Currency: AED | Branches: Dubai HQ, Sharjah,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: 'grok-beta',
+          model: 'grok-3-latest',
           messages: [
             { role: 'system', content: 'You are an expert transport operations analyst for Fresh Fruits Company UAE. Give specific, actionable insights with bullet points, priorities (High/Medium/Low), and concrete recommendations. Use AED for currency.' },
             { role: 'user', content: `Fleet data:\n\n${fleetContext}\n\nQuestion: ${question}` },
@@ -125,8 +126,12 @@ Company: Fresh Fruits Company UAE | Currency: AED | Branches: Dubai HQ, Sharjah,
       })
 
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error?.message ?? `API error ${res.status}`)
+        let errMsg = `API error ${res.status}`
+        try {
+          const err = await res.json()
+          errMsg = err.error?.message ?? err.message ?? errMsg
+        } catch {}
+        throw new Error(errMsg)
       }
 
       const data = await res.json()
